@@ -1,0 +1,1 @@
+"""MBRUS Application Package"""

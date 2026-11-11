@@ -1,0 +1,110 @@
+{
+  "youtube": {
+    "name": "YouTube",
+    "url": "https://www.youtube.com",
+    "icon": "▶️",
+    "category": "Media"
+  },
+  "mail": {
+    "name": "Gmail / Mail",
+    "url": "https://mail.google.com",
+    "icon": "✉️",
+    "category": "Work"
+  },
+  "gmail": {
+    "name": "Gmail",
+    "url": "https://mail.google.com",
+    "icon": "✉️",
+    "category": "Work"
+  },
+  "github": {
+    "name": "GitHub",
+    "url": "https://github.com",
+    "icon": "🐙",
+    "category": "Code"
+  },
+  "whatsapp": {
+    "name": "WhatsApp Web",
+    "url": "https://web.whatsapp.com",
+    "icon": "💬",
+    "category": "Social"
+  },
+  "chatgpt": {
+    "name": "ChatGPT",
+    "url": "https://chatgpt.com",
+    "icon": "🤖",
+    "category": "AI"
+  },
+  "instagram": {
+    "name": "Instagram",
+    "url": "https://www.instagram.com",
+    "icon": "📸",
+    "category": "Social"
+  },
+  "twitter": {
+    "name": "X / Twitter",
+    "url": "https://x.com",
+    "icon": "🐦",
+    "category": "Social"
+  },
+  "x": {
+    "name": "X (Twitter)",
+    "url": "https://x.com",
+    "icon": "✖️",
+    "category": "Social"
+  },
+  "cricbuzz": {
+    "name": "Cricbuzz Live",
+    "url": "https://www.cricbuzz.com/cricket-match/live-scores",
+    "icon": "🏏",
+    "category": "Sports"
+  },
+  "netflix": {
+    "name": "Netflix",
+    "url": "https://www.netflix.com",
+    "icon": "🍿",
+    "category": "Media"
+  },
+  "spotify": {
+    "name": "Spotify Web",
+    "url": "https://open.spotify.com",
+    "icon": "🎵",
+    "category": "Media"
+  },
+  "google": {
+    "name": "Google Search",
+    "url": "https://www.google.com",
+    "icon": "🔍",
+    "category": "General"
+  },
+  "linkedin": {
+    "name": "LinkedIn",
+    "url": "https://www.linkedin.com",
+    "icon": "💼",
+    "category": "Work"
+  },
+  "maps": {
+    "name": "Google Maps",
+    "url": "https://maps.google.com",
+    "icon": "🗺️",
+    "category": "Tools"
+  },
+  "canva": {
+    "name": "Canva",
+    "url": "https://www.canva.com",
+    "icon": "🎨",
+    "category": "Design"
+  },
+  "amazon": {
+    "name": "Amazon India",
+    "url": "https://www.amazon.in",
+    "icon": "📦",
+    "category": "Shopping"
+  },
+  "reddit": {
+    "name": "Reddit",
+    "url": "https://www.reddit.com",
+    "icon": "🔴",
+    "category": "Social"
+  }
+}
