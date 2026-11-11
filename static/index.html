@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MBRUS // Autonomous Personal AI Assistant</title>
+  <link rel="icon" type="image/png" href="/static/images/mbrus_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/jarvis.css">
+</head>
+<body>
+
+  <div class="hud-container">
+    <!-- Top HUD Header -->
+    <header class="hud-header">
+      <div class="brand-section">
+        <img src="/static/images/mbrus_logo.png" alt="MBRUS Dragon Insignia" class="brand-logo-img">
+        <div>
+          <h1 class="brand-title">MBRUS</h1>
+          <div class="brand-tagline">TALK • THINK • ACT // AI CORE</div>
+        </div>
+      </div>
+
+      <div class="header-status-group">
+        <!-- Gemini Status / Trigger Modal -->
+        <div class="status-badge" id="geminiBadge" title="Configure Google Gemini Intelligence" style="cursor:pointer;">
+          <div class="status-dot" id="geminiDot" style="background:#ffaa00;box-shadow:0 0 10px #ffaa00;"></div>
+          <span id="geminiStatusText">✨ CONNECT GEMINI</span>
+        </div>
+
+        <!-- GPS Geolocation Status -->
+        <div class="status-badge" id="gpsBadge" title="Click to refresh GPS Telemetry" style="cursor:pointer;">
+          <div class="status-dot" id="gpsDot" style="background:#00f0ff;box-shadow:0 0 10px #00f0ff;"></div>
+          <span id="gpsStatusText">📍 GPS: INITIALIZING...</span>
+        </div>
+
+        <!-- Clock Display -->
+        <div class="hud-time-display" id="clockDisplay">00:00:00 • 2026-11-08</div>
+
+        <!-- Language Selector -->
+        <div class="lang-selector-group">
+          <span class="lang-icon">🌐</span>
+          <select id="langSelect" class="lang-select">
+            <option value="auto">Auto-Detect</option>
+            <option value="en">English (US)</option>
+            <option value="hi">Hindi (हिंदी)</option>
+            <option value="bn">Bengali (বাংলা)</option>
+            <option value="bho">Bhojpuri (भोजपुरी)</option>
+            <option value="bgc">Haryanvi (हरियाणवी)</option>
+            <option value="mwr">Marwadi (मारवाड़ी)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="locateMeBtn" class="btn-icon" title="Detect GPS Location">📍</button>
+        <button id="handsFreeBtn" class="btn-icon" title="Toggle Hands-Free Continuous Listening">🎙️</button>
+        <button id="muteBtn" class="btn-icon" title="Toggle Audio Voice Mute">🔊</button>
+        <button id="settingsBtn" class="btn-icon" title="Settings & Voice Preference">⚙️</button>
+      </div>
+    </header>
+
+    <!-- Priority Websites Launcher Bar -->
+    <div class="priority-sites-bar">
+      <div class="priority-label">
+        <span>⚡ PRIORITY SITES:</span>
+      </div>
+      <div id="priorityChipsContainer" style="display:inline-flex;gap:8px;overflow-x:auto;">
+        <!-- Priority Site chips loaded dynamically -->
+      </div>
+      <button id="addSiteBtn" class="add-site-btn">+ Add Site</button>
+    </div>
+
+    <!-- HUD Grid Main Layout -->
+    <main class="hud-grid">
+      <!-- Left Panel: Live Sports, Cricbuzz Scores & Weather -->
+      <aside class="hud-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>🏏 LIVE MATCHES</span>
+            <span class="status-badge" id="sportsCountBadge" style="padding:2px 8px;font-size:10px;">0 LIVE</span>
+          </div>
+        </div>
+
+        <div class="panel-content">
+          <!-- Pinpoint Weather Widget -->
+          <div class="weather-box">
+            <div class="weather-header">
+              <div class="weather-city" id="weatherCityName">📍 Locating...</div>
+              <div class="weather-condition" id="weatherCondText">Clear</div>
+            </div>
+            <div class="weather-main">
+              <div class="weather-temp" id="weatherTempVal">--°C</div>
+            </div>
+            <div class="weather-metrics">
+              <div class="weather-metric-item" id="weatherFeels">🌡️ Feels like: --</div>
+              <div class="weather-metric-item" id="weatherHum">💧 Humidity: --</div>
+              <div class="weather-metric-item" id="weatherWind">💨 Wind: --</div>
+              <div class="weather-metric-item" id="weatherCoords">🛰️ Coords: --</div>
+            </div>
+          </div>
+
+          <!-- Cricbuzz / Sports Feed -->
+          <div class="panel-title" style="margin: 12px 0 8px 0;font-size:11px;">CRICBUZZ LIVE SCORES</div>
+          <div id="sportsFeed">
+            <div style="color:var(--text-dim);font-size:12px;text-align:center;padding:20px;">Fetching match scores...</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center Panel: Arc Reactor, Waveform, Quick Chips & Gemini Chat Stream -->
+      <section class="hud-panel center-panel">
+        <!-- Visualizer & Arc Reactor -->
+        <div class="core-visualizer-container">
+          <div class="arc-reactor" id="arcReactor" title="Click to Start/Stop Speech">
+            <div class="reactor-outer-ring"></div>
+            <div class="reactor-inner-ring"></div>
+            <div class="reactor-center">
+              <img src="/static/images/mbrus_logo.png" alt="Dragon Core" class="core-dragon-img">
+            </div>
+          </div>
+          <div class="core-status-text" id="coreStatusText">ONLINE // READY FOR COMMANDS</div>
+          <canvas id="waveCanvas" class="waveform-canvas" width="480" height="36"></canvas>
+        </div>
+
+        <!-- Quick Interaction Chips -->
+        <div class="quick-chips-bar">
+          <button id="newChatBtn" class="chip-btn" style="background:rgba(0,240,255,0.15);border-color:var(--neon-cyan);color:var(--neon-cyan);font-weight:700;">✨ New Chat</button>
+          <button class="chip-btn" data-prompt="What is todays match score?">🏏 Match Score</button>
+          <button class="chip-btn" data-prompt="Where am I and how is the weather?">📍 My GPS Weather</button>
+          <button class="chip-btn" data-prompt="Open YouTube">📺 YouTube</button>
+          <button class="chip-btn" data-prompt="Open Mail">✉️ Mail</button>
+          <button class="chip-btn" data-prompt="राजस्थान का मौसम कैसा है?">🌦️ राजस्थान मौसम</button>
+          <button class="chip-btn" data-prompt="बिहार का मौसम कैसा है?">🌦️ बिहार मौसम</button>
+          <button class="chip-btn" data-prompt="What are today's top news headlines?">📰 Latest News</button>
+          <button class="chip-btn" data-prompt="Tell me a funny programming joke">😂 Tell a Joke</button>
+        </div>
+
+        <!-- Conversational Chat Stream -->
+        <div class="chat-stream" id="chatStream">
+          <div class="chat-bubble assistant">
+            <div class="avatar-icon assistant">
+              <img src="/static/images/mbrus_logo.png" alt="MBRUS">
+            </div>
+            <div class="bubble-content">
+              <strong style="color:var(--neon-red-bright)">MBRUS Dragon Core Online.</strong><br/>
+              Good day, Sir. All autonomous systems, Google Gemini reasoning engines, live Cricbuzz feeds, GPS geolocator, and priority website controllers are synchronized.<br/>
+              How may I assist you today?
+              <div class="bubble-meta">
+                <span>TALK • THINK • ACT // READY</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Input & Mic Bar -->
+        <div class="chat-input-bar">
+          <button id="micBtn" class="mic-toggle-btn" title="Click to Speak">🎙️</button>
+          <input type="text" id="chatInput" class="chat-input" placeholder="Type a message or speak into your microphone..." autocomplete="off">
+          <button id="sendBtn" class="send-btn" title="Send Message">➤</button>
+        </div>
+      </section>
+
+      <!-- Right Panel: Telemetry, Hardware & Quick Guide -->
+      <aside class="hud-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>⚙️ SYSTEM TELEMETRY</span>
+          </div>
+        </div>
+
+        <div class="panel-content">
+          <!-- CPU Utilization -->
+          <div class="metric-tile">
+            <div class="metric-title-row">
+              <span>CPU LOAD</span>
+              <span class="metric-val" id="cpuVal">0%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="cpuFill" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <!-- RAM Utilization -->
+          <div class="metric-tile">
+            <div class="metric-title-row">
+              <span>MEMORY USAGE</span>
+              <span class="metric-val" id="ramVal">0%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="ramFill" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <!-- Battery Level -->
+          <div class="metric-tile">
+            <div class="metric-title-row">
+              <span>BATTERY POWER</span>
+              <span class="metric-val" id="batteryVal">100%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="batteryFill" style="width: 100%;"></div>
+            </div>
+          </div>
+
+          <!-- Storage Disk -->
+          <div class="metric-tile">
+            <div class="metric-title-row">
+              <span>MAIN STORAGE DISK</span>
+              <span class="metric-val" id="diskVal">0%</span>
+            </div>
+          </div>
+
+          <!-- Priority Voice Command Guide -->
+          <div class="panel-title" style="margin: 18px 0 8px 0;font-size:11px;">VOICE CAPABILITIES</div>
+          <div style="font-size:11.5px;color:var(--text-dim);line-height:1.6;font-family:var(--font-mono);">
+            • <strong style="color:var(--neon-cyan);">"Open YouTube / Mail / WhatsApp"</strong><br>
+            • <strong style="color:var(--neon-cyan);">"What is today's match score?"</strong><br>
+            • <strong style="color:var(--neon-cyan);">"What is my location and weather?"</strong><br>
+            • <strong style="color:var(--neon-cyan);">"राजस्थान का मौसम बताओ"</strong> (Hindi/Marwadi)<br>
+            • <strong style="color:var(--neon-cyan);">"बिहार के मौसम कइसन बा?"</strong> (Bhojpuri)<br>
+            • <strong style="color:var(--neon-cyan);">"आजकेर आबहावा केमोन?"</strong> (Bengali)<br>
+            • <strong style="color:var(--neon-cyan);">"Code a Python script for..."</strong> (Gemini)
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Modal: Google Gemini Configuration -->
+  <div class="modal-overlay" id="geminiModal">
+    <div class="modal-box">
+      <h3 class="modal-title">✨ GOOGLE GEMINI ENGINE SETUP</h3>
+      <div id="geminiConnectionStatus" style="font-size:12px;margin-bottom:14px;font-family:var(--font-mono);">
+        Loading Gemini connection status...
+      </div>
+      <div class="modal-form-group">
+        <label class="modal-label" for="geminiApiKeyInput">GEMINI API KEY (FROM GOOGLE AI STUDIO)</label>
+        <input type="password" id="geminiApiKeyInput" class="modal-input" placeholder="AIzaSy...">
+        <div style="font-size:10.5px;color:var(--text-dim);margin-top:4px;">
+          Key is stored locally in your <code>.env</code> file. Get a free key at <a href="https://aistudio.google.com/" target="_blank" style="color:var(--neon-cyan);">Google AI Studio</a>.
+        </div>
+      </div>
+      <div class="modal-form-group">
+        <label class="modal-label" for="geminiModelSelect">ACTIVE GEMINI MODEL</label>
+        <select id="geminiModelSelect" class="modal-select">
+          <option value="gemini-3.8-flash">Gemini 3.8 Flash (Ultra Fast & Conversational - Recommended)</option>
+          <option value="gemini-flash-latest">Gemini Flash Latest (Adaptive High Speed)</option>
+          <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite (Lightweight Efficiency)</option>
+          <option value="gemini-2.5-pro">Gemini 2.5 Pro (Deep Complex Reasoning)</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button id="closeGeminiModalBtn" class="btn-secondary">Cancel</button>
+        <button id="saveGeminiBtn" class="btn-primary">Connect Gemini</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add Priority Website -->
+  <div class="modal-overlay" id="addSiteModal">
+    <div class="modal-box">
+      <h3 class="modal-title">⚡ ADD PRIORITY WEBSITE</h3>
+      <div class="modal-form-group">
+        <label class="modal-label" for="newSiteKey">VOICE KEYWORD (e.g. reddit, netflix)</label>
+        <input type="text" id="newSiteKey" class="modal-input" placeholder="netflix">
+      </div>
+      <div class="modal-form-group">
+        <label class="modal-label" for="newSiteName">DISPLAY NAME (e.g. Netflix)</label>
+        <input type="text" id="newSiteName" class="modal-input" placeholder="Netflix">
+      </div>
+      <div class="modal-form-group">
+        <label class="modal-label" for="newSiteUrl">TARGET URL (e.g. https://netflix.com)</label>
+        <input type="url" id="newSiteUrl" class="modal-input" placeholder="https://www.netflix.com">
+      </div>
+      <div class="modal-form-group">
+        <label class="modal-label" for="newSiteIcon">EMOJI / ICON</label>
+        <input type="text" id="newSiteIcon" class="modal-input" placeholder="🎬" value="🌐">
+      </div>
+      <div class="modal-actions">
+        <button id="closeAddSiteBtn" class="btn-secondary">Cancel</button>
+        <button id="saveNewSiteBtn" class="btn-primary">Add Website</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Settings & Voices -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal-box">
+      <h3 class="modal-title">⚙️ SYSTEM CONFIGURATION</h3>
+      <div class="modal-form-group">
+        <label class="modal-label" for="cityInput">DEFAULT CITY / STATE</label>
+        <input type="text" id="cityInput" class="modal-input" placeholder="New Delhi">
+      </div>
+      <div class="modal-form-group">
+        <label class="modal-label" for="voiceSelect">NEURAL TTS VOICE</label>
+        <select id="voiceSelect" class="modal-select">
+          <option value="en-US-ChristopherNeural">English - Christopher Neural (Jarvis Male)</option>
+          <option value="en-US-EricNeural">English - Eric Neural (Crisp Male)</option>
+          <option value="en-US-JennyNeural">English - Jenny Neural (Natural Female)</option>
+          <option value="hi-IN-MadhurNeural">Hindi / Regional - Madhur Neural (Male)</option>
+          <option value="hi-IN-SwaraNeural">Hindi / Regional - Swara Neural (Female)</option>
+          <option value="bn-IN-BashkarNeural">Bengali - Bashkar Neural (Male)</option>
+          <option value="bn-IN-TanishaaNeural">Bengali - Tanishaa Neural (Female)</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button id="closeSettingsBtn" class="btn-secondary">Cancel</button>
+        <button id="saveSettingsBtn" class="btn-primary">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio and Controller Scripts -->
+  <script src="/static/js/soundfx.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
