@@ -8,7 +8,7 @@ import os
 import re
 import datetime
 import pyjokes
-from app.config import ASSISTANT_NAME, SYSTEM_PROMPT, GEMINI_API_KEY, DEFAULT_CITY
+from app.config import ASSISTANT_NAME, SYSTEM_PROMPT, DEFAULT_CITY
 from app.live_info import (
     get_live_sports_score,
     get_live_weather,

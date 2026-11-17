@@ -13,7 +13,6 @@ PORT = int(os.getenv("PORT", 8000))
 SERVER_HOST = HOST
 SERVER_PORT = PORT
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6J1Zo65pW8xZMFJNm5WF0mLwGj-er1jz4o5dxvML7UBGg")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 DEFAULT_CITY = os.getenv("DEFAULT_CITY", "New Delhi")
 TTS_VOICE = os.getenv("TTS_VOICE", "en-US-ChristopherNeural")
