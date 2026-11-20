@@ -2,14 +2,14 @@
 MBRUS Gemini Chatbot Engine
 Provides Google Gemini API integration with multi-turn conversation memory,
 multilingual reasoning, code execution formatting, and voice synthesis extraction.
-Optimized for high-speed, meaningful, conversational Gemini answers.
+Optimized for ultra-fast, meaningful, conversational Gemini answers.
 """
 
 import os
 import re
 from pathlib import Path
 from dotenv import set_key, load_dotenv
-from app.config import ASSISTANT_NAME
+from app.config import ASSISTANT_NAME, GEMINI_API_KEY
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 ENV_PATH = BASE_DIR / ".env"
@@ -20,57 +20,61 @@ _gemini_client = None
 _active_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 _conversation_history = []
 
+
 AVAILABLE_MODELS = [
     {"id": "gemini-3.5-flash-lite", "name": "Gemini 3.5 Flash Lite (Fastest & Conversational)", "badge": "⚡ Ultra Fast"},
     {"id": "gemini-3.5-flash", "name": "Gemini 3.5 Flash (Balanced Deep Reasoning)", "badge": "🧠 Flash"},
-    {"id": "gemini-3.7-flash", "name": "Gemini 3.7 Flash (Next-Gen Flash)", "badge": "🚀 Fast"},
-    {"id": "gemini-3.8-flash", "name": "Gemini 3.8 Flash (Comprehensive Reasoning)", "badge": "⚡ 3.8"}
+    {"id": "gemini-3.8-flash", "name": "Gemini 3.8 Flash (Comprehensive Reasoning)", "badge": "⚡ 3.8"},
+    {"id": "gemini-3.7-flash", "name": "Gemini 3.7 Flash (Next-Gen Flash)", "badge": "🚀 Fast"}
 ]
 
 FALLBACK_MODELS = [
     "gemini-3.5-flash-lite",
     "gemini-3.5-flash",
-    "gemini-3.7-flash",
-    "gemini-3.8-flash"
+    "gemini-3.8-flash",
+    "gemini-3.7-flash"
 ]
 
 
+def create_genai_client(api_key: str):
+    """Creates a google-genai Client with timeout protection."""
+    from google import genai
+    from google.genai import types
+    http_opts = types.HttpOptions(timeout=15000)
+    return genai.Client(api_key=api_key, http_options=http_opts)
+
+
 def init_gemini_client():
-    """Initializes the official Google GenAI client if GEMINI_API_KEY is available."""
+    """Initializes the official Google GenAI client from backend configuration."""
     global _gemini_client
     load_dotenv(ENV_PATH, override=True)
-    api_key = os.getenv("GEMINI_API_KEY", "").strip()
-    if api_key:
-        try:
-            from google import genai
-            _gemini_client = genai.Client(api_key=api_key)
-            print("[GeminiEngine] Google Gemini Client successfully initialized.")
-            return True
-        except Exception as e:
-            print(f"[GeminiEngine] Error initializing Gemini client: {e}")
-            _gemini_client = None
-            return False
-    _gemini_client = None
-    return False
+    api_key = os.getenv("GEMINI_API_KEY", "").strip() or GEMINI_API_KEY.strip()
+    if not api_key:
+        _gemini_client = None
+        return False
+
+    try:
+        _gemini_client = create_genai_client(api_key)
+        print("[GeminiEngine] Google Gemini Client successfully initialized with backend key.")
+        return True
+    except Exception as e:
+        print(f"[GeminiEngine] Client initialization failed: {e}")
+        _gemini_client = None
+        return False
 
 
 init_gemini_client()
 
 
 def get_gemini_status() -> dict:
-    """Returns current status of Gemini API connection and model."""
+    """Returns current status of Gemini API connection and model without exposing any keys."""
     load_dotenv(ENV_PATH, override=True)
-    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    api_key = os.getenv("GEMINI_API_KEY", "").strip() or GEMINI_API_KEY.strip()
     has_key = bool(api_key and len(api_key) > 10)
-    
-    masked_key = ""
-    if has_key:
-        masked_key = f"{api_key[:6]}...{api_key[-4:]}"
 
     return {
         "configured": bool(_gemini_client and has_key),
         "has_key": has_key,
-        "masked_key": masked_key,
         "active_model": _active_model,
         "available_models": AVAILABLE_MODELS
     }
@@ -78,9 +82,9 @@ def get_gemini_status() -> dict:
 
 def save_gemini_key(new_key: str, model: str = "") -> dict:
     """Saves Gemini API key and active model to .env and updates runtime client."""
-    global _active_model
+    global _active_model, _gemini_client
     clean_key = new_key.strip()
-    
+
     if not ENV_PATH.exists():
         ENV_PATH.write_text(f"GEMINI_API_KEY={clean_key}\nGEMINI_MODEL={model or _active_model}\n", encoding="utf-8")
     else:
@@ -131,10 +135,11 @@ def parse_gemini_response(raw_output: str) -> tuple[str, str]:
     if voice_match and display_match:
         spoken = voice_match.group(1).strip()
         markdown = display_match.group(1).strip()
+        spoken = re.sub(r"[\*#`_~]", "", spoken).strip()
         return spoken, markdown
 
     clean_display = raw_output.replace("<voice>", "").replace("</voice>", "").replace("<display>", "").replace("</display>", "").strip()
-    
+
     text_no_code = re.sub(r"```[\s\S]*?```", "", clean_display)
     text_no_code = re.sub(r"`.*?`", "", text_no_code)
     text_no_code = re.sub(r"#+\s*", "", text_no_code)
@@ -146,7 +151,7 @@ def parse_gemini_response(raw_output: str) -> tuple[str, str]:
     sentences = re.split(r"(?<=[.!?।])\s+", clean_passage)
     spoken = " ".join(sentences[:2]).strip()
     if not spoken:
-        spoken = clean_passage[:150].strip()
+        spoken = clean_passage[:160].strip()
 
     return spoken, clean_display
 
@@ -173,23 +178,26 @@ def generate_gemini_response(
         "bho": "Speak and reply in authentic colloquial Bhojpuri (भोजपुरी) using Devanagari script. Tone: warm, respectful, conversational (use 'भैया' / 'रउआ').",
         "bgc": "Speak and reply in energetic Haryanvi dialect (हरियाणवी) using Devanagari script. Tone: energetic, conversational, respectful (use 'भाई' / 'ताऊ').",
         "mwr": "Speak and reply in authentic Marwadi / Rajasthani (मारवाड़ी) using Devanagari script. Tone: courteous, warm (use 'हुकम सा' / 'सा').",
-        "bn": "Speak and reply in natural, conversational Bengali (বাংলা) using Bengali script.",
+        "bn": "Speak and reply in natural, fluent, witty Bengali (বাংলা) using Bengali script.",
         "hi": "Speak and reply in natural, fluent, conversational Hindi (हिंदी) using Devanagari script.",
         "en": "Speak and reply in articulate, warm, and brilliant conversational English like Gemini paired with Jarvis."
     }
     lang_guidance = lang_instructions.get(language, "Match the user's language naturally and conversationally.")
 
     system_instruction = (
-        f"You are {ASSISTANT_NAME}, a brilliant, friendly, and ultra-intelligent AI assistant powered by Google Gemini. "
+        f"You are {ASSISTANT_NAME}, an ultra-intelligent, fast, and conversational AI personal assistant powered by Google Gemini. "
+        "Core Identity Directive: If asked 'who are you', 'what are you', who built/made/created you, or about your origins, you MUST always state clearly: 'I am a machine built by someone from Jaipur.'\n"
+        "Personality Directive: Answer questions with high intelligence, warmth, clarity, and depth like Gemini. Be fast, meaningful, and conversant.\n"
         "Motto: TALK • THINK • ACT.\n\n"
-        f"Conversational & Language Directive: {lang_guidance}\n\n"
-        "Crucial Formatting Rule:\n"
-        "You MUST structure your entire response using these two tags:\n"
+        f"Language & Voice Directive: {lang_guidance}\n\n"
+        "Crucial Output Rules:\n"
+        "1. Be direct, conversational, fast, and meaningful. Answer naturally like Gemini. Avoid robotic disclaimers.\n"
+        "2. You MUST structure your entire response using these two tags:\n"
         "<voice>\n"
-        "1 or 2 natural, punchy, conversational spoken sentences directly answering the user. No markdown symbols, no asterisks, no code syntax, no bullet points — this is read aloud by the neural TTS engine.\n"
+        "1 to 2 natural, punchy, conversational spoken sentences directly answering the user. No markdown symbols, no asterisks, no bullets, no URLs — this is read aloud by the neural TTS engine.\n"
         "</voice>\n"
         "<display>\n"
-        "The complete, meaningful, beautifully formatted response in Markdown. Use bold headers, bullet lists, tables, and formatted code blocks with language identifiers where appropriate. Be thorough, insightful, and engaging.\n"
+        "The complete, meaningful, beautifully formatted response in Markdown. Use clear headers, bullet points, clean tables, or syntax-highlighted code blocks where appropriate. Be insightful, concise, and helpful.\n"
         "</display>"
     )
 
@@ -200,13 +208,13 @@ def generate_gemini_response(
     from google.genai import types
 
     contents_payload = []
-    # Keep last 6 turns for fast context window
-    for turn in _conversation_history[-6:]:
+    # Keep last 4 turns for fast context window and minimal token overhead
+    for turn in _conversation_history[-4:]:
         contents_payload.append(types.Content(
             role=turn["role"],
             parts=[types.Part.from_text(text=turn["text"])]
         ))
-    
+
     contents_payload.append(types.Content(
         role="user",
         parts=[types.Part.from_text(text=augmented_prompt)]
@@ -216,10 +224,9 @@ def generate_gemini_response(
         system_instruction=system_instruction,
         temperature=0.7,
         top_p=0.95,
-        max_output_tokens=1500
+        max_output_tokens=1024
     )
 
-    # Try active model first, with instant fallback through candidate list if needed
     candidate_models = [_active_model] + [m for m in FALLBACK_MODELS if m != _active_model]
     last_error = None
 
@@ -248,7 +255,7 @@ def generate_gemini_response(
             }
         except Exception as e:
             last_error = str(e)
-            print(f"[GeminiEngine] Model {model_name} attempt failed: {e}. Trying fallback...")
+            print(f"[GeminiEngine] Model {model_name} notice: {e}")
             continue
 
     return {

@@ -4,6 +4,7 @@ Automates Windows applications, priority websites, volume, browser shortcuts, me
 """
 
 import os
+import re
 import json
 import subprocess
 import webbrowser
@@ -14,6 +15,53 @@ import psutil
 import pyautogui
 
 DATA_FILE = Path(__file__).resolve().parent.parent / "data" / "priority_sites.json"
+
+KNOWN_WEB_APPS = {
+    "youtube": {"name": "YouTube", "url": "https://www.youtube.com", "icon": "▶️"},
+    "yt": {"name": "YouTube", "url": "https://www.youtube.com", "icon": "▶️"},
+    "github": {"name": "GitHub", "url": "https://github.com", "icon": "🐙"},
+    "git": {"name": "GitHub", "url": "https://github.com", "icon": "🐙"},
+    "gmail": {"name": "Gmail", "url": "https://mail.google.com", "icon": "✉️"},
+    "mail": {"name": "Gmail", "url": "https://mail.google.com", "icon": "✉️"},
+    "email": {"name": "Gmail", "url": "https://mail.google.com", "icon": "✉️"},
+    "chatgpt": {"name": "ChatGPT", "url": "https://chatgpt.com", "icon": "🤖"},
+    "chat gpt": {"name": "ChatGPT", "url": "https://chatgpt.com", "icon": "🤖"},
+    "openai": {"name": "ChatGPT", "url": "https://chatgpt.com", "icon": "🤖"},
+    "spotify": {"name": "Spotify", "url": "https://open.spotify.com", "icon": "🎵"},
+    "whatsapp": {"name": "WhatsApp Web", "url": "https://web.whatsapp.com", "icon": "💬"},
+    "twitter": {"name": "X (Twitter)", "url": "https://x.com", "icon": "🐦"},
+    "x": {"name": "X (Twitter)", "url": "https://x.com", "icon": "✖️"},
+    "netflix": {"name": "Netflix", "url": "https://www.netflix.com", "icon": "🍿"},
+    "reddit": {"name": "Reddit", "url": "https://www.reddit.com", "icon": "🔴"},
+    "canva": {"name": "Canva", "url": "https://www.canva.com", "icon": "🎨"},
+    "amazon": {"name": "Amazon", "url": "https://www.amazon.in", "icon": "📦"},
+    "linkedin": {"name": "LinkedIn", "url": "https://www.linkedin.com", "icon": "💼"},
+    "maps": {"name": "Google Maps", "url": "https://maps.google.com", "icon": "🗺️"},
+    "google maps": {"name": "Google Maps", "url": "https://maps.google.com", "icon": "🗺️"},
+    "google": {"name": "Google", "url": "https://www.google.com", "icon": "🔍"},
+    "new tab": {"name": "New Tab", "url": "https://www.google.com", "icon": "📑"},
+    "a new tab": {"name": "New Tab", "url": "https://www.google.com", "icon": "📑"},
+    "tab": {"name": "New Tab", "url": "https://www.google.com", "icon": "📑"},
+    "blank tab": {"name": "New Tab", "url": "https://www.google.com", "icon": "📑"},
+    "नया टैब": {"name": "New Tab", "url": "https://www.google.com", "icon": "📑"},
+    "নতুন ট্যাব": {"name": "New Tab", "url": "https://www.google.com", "icon": "📑"},
+    "टैब": {"name": "New Tab", "url": "https://www.google.com", "icon": "📑"},
+    "ট্যাব": {"name": "New Tab", "url": "https://www.google.com", "icon": "📑"},
+    "यूट्यूब": {"name": "YouTube", "url": "https://www.youtube.com", "icon": "▶️"},
+    "ইউটিউব": {"name": "YouTube", "url": "https://www.youtube.com", "icon": "▶️"},
+    "व्हाट्सएप": {"name": "WhatsApp Web", "url": "https://web.whatsapp.com", "icon": "💬"},
+    "হোয়াটসঅ্যাপ": {"name": "WhatsApp Web", "url": "https://web.whatsapp.com", "icon": "💬"},
+    "जीमेल": {"name": "Gmail", "url": "https://mail.google.com", "icon": "✉️"},
+    "জিমেল": {"name": "Gmail", "url": "https://mail.google.com", "icon": "✉️"},
+    "गूगल": {"name": "Google", "url": "https://www.google.com", "icon": "🔍"},
+    "গুগল": {"name": "Google", "url": "https://www.google.com", "icon": "🔍"},
+    "गिटहब": {"name": "GitHub", "url": "https://github.com", "icon": "🐙"},
+    "গিটহাব": {"name": "GitHub", "url": "https://github.com", "icon": "🐙"},
+    "stackoverflow": {"name": "Stack Overflow", "url": "https://stackoverflow.com", "icon": "💻"},
+    "wikipedia": {"name": "Wikipedia", "url": "https://www.wikipedia.org", "icon": "📖"},
+    "instagram": {"name": "Instagram", "url": "https://www.instagram.com", "icon": "📸"},
+    "facebook": {"name": "Facebook", "url": "https://www.facebook.com", "icon": "📘"}
+}
 
 def load_priority_sites() -> dict:
     if DATA_FILE.exists():
@@ -98,18 +146,64 @@ def get_system_diagnostics() -> dict:
 
 def open_application(target: str) -> dict:
     clean_target = target.lower().strip()
+    # Strip common command prefixes
+    for prefix in ["open a new tab in ", "open new tab in ", "open a tab for ", "open new tab ", "open a new tab ", "open tab ", "open a ", "open ", "launch ", "go to "]:
+        if clean_target.startswith(prefix):
+            clean_target = clean_target[len(prefix):].strip()
+            break
 
+    # 1. Check Known Web Applications & New Tab requests
+    if clean_target in KNOWN_WEB_APPS:
+        app_info = KNOWN_WEB_APPS[clean_target]
+        url = app_info["url"]
+        try:
+            webbrowser.open(url)
+        except Exception as e:
+            print(f"[SystemControl] webbrowser open warning: {e}")
+        return {
+            "success": True,
+            "open_tab": True,
+            "url": url,
+            "site": app_info,
+            "voice_text": f"Opening {app_info['name']} in a new tab for you, Sir.",
+            "action": f"Navigated to {url}"
+        }
+
+    # Partial match for Known Web Apps (e.g. 'yt', 'whatsapp', 'chatgpt')
+    for key, app_info in KNOWN_WEB_APPS.items():
+        if key == clean_target or f" {key} " in f" {clean_target} ":
+            url = app_info["url"]
+            try:
+                webbrowser.open(url)
+            except Exception as e:
+                print(f"[SystemControl] webbrowser open warning: {e}")
+            return {
+                "success": True,
+                "open_tab": True,
+                "url": url,
+                "site": app_info,
+                "voice_text": f"Opening {app_info['name']} in a new tab for you, Sir.",
+                "action": f"Navigated to {url}"
+            }
+
+    # 2. Check User-saved Priority Sites
     priority_sites = load_priority_sites()
     for key, site in priority_sites.items():
         if key in clean_target or clean_target in key or site["name"].lower() in clean_target:
-            webbrowser.open(site["url"])
+            try:
+                webbrowser.open(site["url"])
+            except Exception as e:
+                print(f"[SystemControl] webbrowser open warning: {e}")
             return {
                 "success": True,
-                "voice_text": f"Opening your priority site {site['name']} in your web browser now, Sir.",
+                "open_tab": True,
+                "url": site["url"],
+                "voice_text": f"Opening {site['name']} in a new tab for you, Sir.",
                 "action": f"Navigated to {site['url']}",
                 "site": site
             }
 
+    # 3. Check Native Windows Applications
     native_apps = {
         "calculator": "calc.exe",
         "calc": "calc.exe",
@@ -127,56 +221,156 @@ def open_application(target: str) -> dict:
     }
 
     for key, binary in native_apps.items():
-        if key in clean_target:
+        if key == clean_target or key in clean_target:
             try:
                 subprocess.Popen(binary, shell=True)
                 return {
                     "success": True,
+                    "open_tab": False,
                     "voice_text": f"Launching {key.title()} on your system, Sir.",
                     "action": f"Executed {binary}"
                 }
             except Exception as e:
                 print(f"[SystemControl] App error: {e}")
 
+    # 4. Direct domain URL (e.g. 'github.com', 'google.com', 'facebook.com')
     if "." in clean_target and " " not in clean_target:
         url = clean_target if clean_target.startswith("http") else f"https://{clean_target}"
-        webbrowser.open(url)
+        try:
+            webbrowser.open(url)
+        except Exception as e:
+            print(f"[SystemControl] webbrowser open warning: {e}")
         return {
             "success": True,
-            "voice_text": f"Opening {clean_target} in your browser, Sir.",
+            "open_tab": True,
+            "url": url,
+            "voice_text": f"Opening {clean_target} in a new tab, Sir.",
             "action": f"Navigated to {url}"
         }
 
+    # 5. Fallback Web Search in New Tab
     search_url = f"https://www.google.com/search?q={urllib.parse.quote(clean_target)}"
-    webbrowser.open(search_url)
+    try:
+        webbrowser.open(search_url)
+    except Exception as e:
+        print(f"[SystemControl] webbrowser open warning: {e}")
     return {
         "success": True,
-        "voice_text": f"Opening web search for {clean_target} in your browser, Sir.",
+        "open_tab": True,
+        "url": search_url,
+        "voice_text": f"Opening web search for {clean_target} in a new tab, Sir.",
         "action": f"Navigated to {search_url}"
     }
 
 
 def play_youtube(query: str) -> dict:
-    clean_q = query.replace("play", "").replace("on youtube", "").replace("youtube", "").strip()
-    if not clean_q:
-        webbrowser.open("https://www.youtube.com")
-        return {"voice_text": "Opening YouTube for you, Sir."}
+    # Clean query from command phrasing
+    raw = query.lower()
+    noise_pattern = (
+        r"\b(play|on youtube|in youtube|from youtube|youtube|that song|some song|a song|"
+        r"or something|or anything|something|anything|song|songs|video|music|track|"
+        r"or|and|that|this|some|a|an|the|in|on|to|for|me|"
+        r"gaan|gaana|gana|chalao|bajao|baja do|shonao|kholo|chalav)\b|"
+        r"(गाना|बजाओ|चलाओ|गीत|গান|শোনাও|বাজাও)"
+    )
+    clean_q = re.sub(noise_pattern, " ", raw, flags=re.IGNORECASE).strip()
+    clean_q = re.sub(r"\s+", " ", clean_q).strip()
 
-    url = f"https://www.youtube.com/results?search_query={urllib.parse.quote(clean_q)}"
-    webbrowser.open(url)
+    # If query is empty or purely generic (like "play that song or something on youtube")
+    if not clean_q or len(clean_q) < 2 or clean_q in ["that", "this", "or", "and", "something"]:
+        display_title = "Trending Top Hits"
+        search_query = "trending top hits music songs"
+        url = "https://www.youtube.com/results?search_query=trending+top+hits+music+songs"
+    else:
+        display_title = clean_q.title()
+        search_query = clean_q
+        url = f"https://www.youtube.com/results?search_query={urllib.parse.quote(clean_q)}"
+
+    try:
+        webbrowser.open(url)
+    except Exception as e:
+        print(f"[SystemControl] webbrowser open warning: {e}")
+
     return {
-        "voice_text": f"Playing {clean_q} on YouTube right now, Sir.",
+        "success": True,
+        "open_tab": True,
+        "url": url,
+        "query": search_query,
+        "display_title": display_title,
+        "voice_text": f"Playing {display_title} on YouTube in a new tab, Sir."
+    }
+
+
+def play_spotify(query: str) -> dict:
+    raw = query.lower()
+    noise_pattern = r"\b(play|on spotify|in spotify|from spotify|spotify|that song|some song|a song|something|song|songs|music|track|chalao|bajao)\b"
+    clean_q = re.sub(noise_pattern, " ", raw, flags=re.IGNORECASE).strip()
+    clean_q = re.sub(r"\s+", " ", clean_q).strip()
+
+    if not clean_q or len(clean_q) < 2:
+        display_title = "Top Hits"
+        url = "https://open.spotify.com"
+    else:
+        display_title = clean_q.title()
+        url = f"https://open.spotify.com/search/{urllib.parse.quote(clean_q)}"
+
+    try:
+        webbrowser.open(url)
+    except Exception as e:
+        print(f"[SystemControl] webbrowser open warning: {e}")
+
+    return {
+        "success": True,
+        "open_tab": True,
+        "url": url,
         "query": clean_q,
-        "url": url
+        "display_title": display_title,
+        "voice_text": f"Playing {display_title} on Spotify in a new tab, Sir."
+    }
+
+
+def search_specific_app(app_name: str, query: str) -> dict:
+    clean_q = query.strip()
+    app_key = app_name.lower().strip()
+
+    search_urls = {
+        "github": f"https://github.com/search?q={urllib.parse.quote(clean_q)}",
+        "git": f"https://github.com/search?q={urllib.parse.quote(clean_q)}",
+        "amazon": f"https://www.amazon.in/s?k={urllib.parse.quote(clean_q)}",
+        "wikipedia": f"https://en.wikipedia.org/wiki/Special:Search?search={urllib.parse.quote(clean_q)}",
+        "maps": f"https://www.google.com/maps/search/{urllib.parse.quote(clean_q)}",
+        "netflix": f"https://www.netflix.com/search?q={urllib.parse.quote(clean_q)}",
+        "reddit": f"https://www.reddit.com/search/?q={urllib.parse.quote(clean_q)}",
+        "stackoverflow": f"https://stackoverflow.com/search?q={urllib.parse.quote(clean_q)}",
+        "google": f"https://www.google.com/search?q={urllib.parse.quote(clean_q)}"
+    }
+
+    url = search_urls.get(app_key, f"https://www.google.com/search?q={urllib.parse.quote(clean_q)}")
+    try:
+        webbrowser.open(url)
+    except Exception as e:
+        print(f"[SystemControl] webbrowser open warning: {e}")
+
+    return {
+        "success": True,
+        "open_tab": True,
+        "url": url,
+        "query": clean_q,
+        "voice_text": f"Searching {app_name.title()} for {clean_q} in a new tab, Sir."
     }
 
 
 def search_google(query: str) -> dict:
     clean_q = query.replace("search for", "").replace("search", "").replace("google", "").strip()
     url = f"https://www.google.com/search?q={urllib.parse.quote(clean_q)}"
-    webbrowser.open(url)
+    try:
+        webbrowser.open(url)
+    except Exception as e:
+        print(f"[SystemControl] webbrowser open warning: {e}")
     return {
-        "voice_text": f"Searching Google for {clean_q}, Sir.",
+        "success": True,
+        "open_tab": True,
+        "voice_text": f"Searching Google for {clean_q} in a new tab, Sir.",
         "query": clean_q,
         "url": url
     }

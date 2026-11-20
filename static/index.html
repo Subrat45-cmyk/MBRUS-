@@ -24,10 +24,16 @@
       </div>
 
       <div class="header-status-group">
-        <!-- Gemini Status / Trigger Modal -->
-        <div class="status-badge" id="geminiBadge" title="Configure Google Gemini Intelligence" style="cursor:pointer;">
-          <div class="status-dot" id="geminiDot" style="background:#ffaa00;box-shadow:0 0 10px #ffaa00;"></div>
-          <span id="geminiStatusText">✨ CONNECT GEMINI</span>
+        <!-- Gemini Status Indicator -->
+        <div class="status-badge" id="geminiBadge" title="Google Gemini Intelligence Core (Online)">
+          <div class="status-dot" id="geminiDot" style="background:#00ff88;box-shadow:0 0 10px #00ff88;"></div>
+          <span id="geminiStatusText">✨ GEMINI AI: ONLINE</span>
+        </div>
+
+        <!-- Wake Word Detection Standby Status -->
+        <div class="status-badge" id="wakeWordBadge" title="Click to toggle Wake Word Standby Engine" style="cursor:pointer;">
+          <div class="status-dot" id="wakeWordDot" style="background:#00f0ff;box-shadow:0 0 10px #00f0ff;"></div>
+          <span id="wakeWordStatusText">🎙️ WAKE: "HEY MBRUS"</span>
         </div>
 
         <!-- GPS Geolocation Status -->
@@ -128,13 +134,15 @@
         <!-- Quick Interaction Chips -->
         <div class="quick-chips-bar">
           <button id="newChatBtn" class="chip-btn" style="background:rgba(0,240,255,0.15);border-color:var(--neon-cyan);color:var(--neon-cyan);font-weight:700;">✨ New Chat</button>
-          <button class="chip-btn" data-prompt="What is todays match score?">🏏 Match Score</button>
-          <button class="chip-btn" data-prompt="Where am I and how is the weather?">📍 My GPS Weather</button>
+          <button class="chip-btn" data-prompt="Who are you?">🤖 Who are you?</button>
+          <button class="chip-btn" data-prompt="Open a new tab">📑 Open New Tab</button>
+          <button class="chip-btn" data-prompt="Play that song or something in youtube">▶️ Play on YouTube</button>
           <button class="chip-btn" data-prompt="Open YouTube">📺 YouTube</button>
-          <button class="chip-btn" data-prompt="Open Mail">✉️ Mail</button>
-          <button class="chip-btn" data-prompt="राजस्थान का मौसम कैसा है?">🌦️ राजस्थान मौसम</button>
-          <button class="chip-btn" data-prompt="बिहार का मौसम कैसा है?">🌦️ बिहार मौसम</button>
-          <button class="chip-btn" data-prompt="What are today's top news headlines?">📰 Latest News</button>
+          <button class="chip-btn" data-prompt="Open GitHub">🐙 GitHub</button>
+          <button class="chip-btn" data-prompt="Open Mail">✉️ Gmail</button>
+          <button class="chip-btn" data-prompt="Open ChatGPT">🤖 ChatGPT</button>
+          <button class="chip-btn" data-prompt="What is todays match score?">🏏 Match Score</button>
+          <button class="chip-btn" data-prompt="Where am I and how is the weather?">📍 GPS Weather</button>
           <button class="chip-btn" data-prompt="Tell me a funny programming joke">😂 Tell a Joke</button>
         </div>
 
@@ -229,35 +237,7 @@
     </main>
   </div>
 
-  <!-- Modal: Google Gemini Configuration -->
-  <div class="modal-overlay" id="geminiModal">
-    <div class="modal-box">
-      <h3 class="modal-title">✨ GOOGLE GEMINI ENGINE SETUP</h3>
-      <div id="geminiConnectionStatus" style="font-size:12px;margin-bottom:14px;font-family:var(--font-mono);">
-        Loading Gemini connection status...
-      </div>
-      <div class="modal-form-group">
-        <label class="modal-label" for="geminiApiKeyInput">GEMINI API KEY (FROM GOOGLE AI STUDIO)</label>
-        <input type="password" id="geminiApiKeyInput" class="modal-input" placeholder="AIzaSy...">
-        <div style="font-size:10.5px;color:var(--text-dim);margin-top:4px;">
-          Key is stored locally in your <code>.env</code> file. Get a free key at <a href="https://aistudio.google.com/" target="_blank" style="color:var(--neon-cyan);">Google AI Studio</a>.
-        </div>
-      </div>
-      <div class="modal-form-group">
-        <label class="modal-label" for="geminiModelSelect">ACTIVE GEMINI MODEL</label>
-        <select id="geminiModelSelect" class="modal-select">
-          <option value="gemini-3.8-flash">Gemini 3.8 Flash (Ultra Fast & Conversational - Recommended)</option>
-          <option value="gemini-flash-latest">Gemini Flash Latest (Adaptive High Speed)</option>
-          <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite (Lightweight Efficiency)</option>
-          <option value="gemini-2.5-pro">Gemini 2.5 Pro (Deep Complex Reasoning)</option>
-        </select>
-      </div>
-      <div class="modal-actions">
-        <button id="closeGeminiModalBtn" class="btn-secondary">Cancel</button>
-        <button id="saveGeminiBtn" class="btn-primary">Connect Gemini</button>
-      </div>
-    </div>
-  </div>
+
 
   <!-- Modal: Add Priority Website -->
   <div class="modal-overlay" id="addSiteModal">
@@ -290,6 +270,18 @@
   <div class="modal-overlay" id="settingsModal">
     <div class="modal-box">
       <h3 class="modal-title">⚙️ SYSTEM CONFIGURATION</h3>
+      <div class="modal-form-group">
+        <label class="modal-label" for="wakeWordInput">WAKE WORD / CALL NAME (WHAT YOU CALL MBRUS)</label>
+        <input type="text" id="wakeWordInput" class="modal-input" placeholder="Hey MBRUS">
+        <small style="color:var(--text-dim);font-size:11px;margin-top:4px;display:block;">Set any custom name or phrase you want (e.g. <em>"Hey Major"</em>, <em>"Hey Google"</em>, <em>"Hey MBRUS"</em>, <em>"Jarvis"</em>). Speaking this name activates MBRUS instantly!</small>
+      </div>
+      <div class="modal-form-group" style="margin-top:10px;">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;color:#fff;font-family:var(--font-rajdhani);font-size:14px;">
+          <input type="checkbox" id="autoWakeWordCheck" checked style="accent-color:var(--neon-cyan);width:18px;height:18px;cursor:pointer;">
+          <span>Auto-Start Standby Wake Word Engine</span>
+        </label>
+        <small style="color:var(--text-dim);font-size:11px;display:block;margin-top:2px;">Keeps microphone listening on standby. Calling the assistant's name auto-activates the voice button!</small>
+      </div>
       <div class="modal-form-group">
         <label class="modal-label" for="cityInput">DEFAULT CITY / STATE</label>
         <input type="text" id="cityInput" class="modal-input" placeholder="New Delhi">

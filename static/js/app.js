@@ -32,16 +32,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const weatherCoords = document.getElementById('weatherCoords');
     const clockDisplay = document.getElementById('clockDisplay');
 
-    // Gemini Modal Elements
+    // Gemini Status Elements
     const geminiBadge = document.getElementById('geminiBadge');
     const geminiDot = document.getElementById('geminiDot');
     const geminiStatusText = document.getElementById('geminiStatusText');
-    const geminiModal = document.getElementById('geminiModal');
-    const closeGeminiModalBtn = document.getElementById('closeGeminiModalBtn');
-    const saveGeminiBtn = document.getElementById('saveGeminiBtn');
-    const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
-    const geminiModelSelect = document.getElementById('geminiModelSelect');
-    const geminiConnectionStatus = document.getElementById('geminiConnectionStatus');
     const newChatBtn = document.getElementById('newChatBtn');
 
     // Priority Sites Elements
@@ -70,6 +64,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveSettingsBtn = document.getElementById('saveSettingsBtn');
     const cityInput = document.getElementById('cityInput');
     const voiceSelect = document.getElementById('voiceSelect');
+    const wakeWordInput = document.getElementById('wakeWordInput');
+    const autoWakeWordCheck = document.getElementById('autoWakeWordCheck');
+
+    // Wake Word Status Elements
+    const wakeWordBadge = document.getElementById('wakeWordBadge');
+    const wakeWordDot = document.getElementById('wakeWordDot');
+    const wakeWordStatusText = document.getElementById('wakeWordStatusText');
 
     let isListening = false;
     let isHandsFree = false;
@@ -81,6 +82,31 @@ document.addEventListener('DOMContentLoaded', () => {
     let recognition = null;
     let visualizerAnimId = null;
     let userCoords = null;
+
+    // Wake Word Engine Config & State
+    let configuredWakeWord = localStorage.getItem('mbrus_wake_word') || 'Hey MBRUS';
+    let autoWakeEnabled = localStorage.getItem('mbrus_auto_wake') !== 'false';
+    let isStandbyMode = true;
+    let activeListenTimeout = null;
+
+    function updateWakeWordUI() {
+        if (!wakeWordStatusText || !wakeWordDot) return;
+        const displayName = configuredWakeWord.toUpperCase();
+        if (autoWakeEnabled) {
+            wakeWordStatusText.textContent = `🎙️ WAKE: "${displayName}"`;
+            wakeWordDot.style.background = '#00f0ff';
+            wakeWordDot.style.boxShadow = '0 0 10px #00f0ff';
+            handsFreeBtn.classList.add('active');
+            handsFreeBtn.title = `Auto-Wake Engine Active (Call "${configuredWakeWord}")`;
+        } else {
+            wakeWordStatusText.textContent = `🎙️ WAKE: OFF`;
+            wakeWordDot.style.background = '#666';
+            wakeWordDot.style.boxShadow = 'none';
+            handsFreeBtn.classList.remove('active');
+            handsFreeBtn.title = `Click to Enable Auto-Wake Engine`;
+        }
+    }
+    updateWakeWordUI();
 
     // Dual Waveform Visualizer
     const canvas = document.getElementById('waveCanvas');
@@ -126,8 +152,14 @@ document.addEventListener('DOMContentLoaded', () => {
     renderWaveform();
 
     function setAssistantState(state) {
-        arcReactor.classList.remove('listening', 'thinking', 'speaking');
+        arcReactor.classList.remove('listening', 'thinking', 'speaking', 'standby');
         switch (state) {
+            case 'standby':
+                arcReactor.classList.add('standby');
+                coreStatusText.textContent = `STANDBY // CALL "${configuredWakeWord.toUpperCase()}"`;
+                coreStatusText.style.color = 'var(--neon-cyan)';
+                micBtn.classList.remove('recording');
+                break;
             case 'listening':
                 arcReactor.classList.add('listening');
                 coreStatusText.textContent = 'LISTENING FOR SPEECH...';
@@ -148,9 +180,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'idle':
             default:
-                coreStatusText.textContent = isHandsFree ? 'HANDS-FREE ACTIVE • SPEAK NOW' : 'ONLINE // READY FOR COMMANDS';
-                coreStatusText.style.color = 'var(--neon-red-bright)';
-                micBtn.classList.remove('recording');
+                if (autoWakeEnabled) {
+                    setAssistantState('standby');
+                } else {
+                    coreStatusText.textContent = 'ONLINE // READY FOR COMMANDS';
+                    coreStatusText.style.color = 'var(--neon-red-bright)';
+                    micBtn.classList.remove('recording');
+                }
                 break;
         }
     }
@@ -217,74 +253,21 @@ document.addEventListener('DOMContentLoaded', () => {
         weatherCoords.textContent = `🛰️ Coords: ${w.latitude.toFixed(2)}°, ${w.longitude.toFixed(2)}°`;
     }
 
-    // Gemini Engine Controller & New Chat
+    // Gemini Engine Status Controller
     async function loadGeminiStatus() {
         try {
             const res = await fetch('/api/gemini/status');
             const data = await res.json();
-            if (data.configured) {
-                geminiStatusText.textContent = `✨ ${data.active_model.toUpperCase().replace('-FLASH-LITE', ' FLASH LITE').replace('-FLASH', ' FLASH').replace('-PRO', ' PRO')}`;
+            const modelName = data.active_model ? data.active_model.toUpperCase().replace('-FLASH-LITE', ' FLASH LITE').replace('-FLASH', ' FLASH').replace('-PRO', ' PRO') : 'AI CORE';
+            if (geminiStatusText) geminiStatusText.textContent = `✨ ${modelName}`;
+            if (geminiDot) {
                 geminiDot.style.background = '#00ff88';
                 geminiDot.style.boxShadow = '0 0 10px #00ff88';
-                if (data.available_models && data.available_models.length > 0) {
-                    geminiModelSelect.innerHTML = data.available_models.map(m => 
-                        `<option value="${m.id}">${m.name}</option>`
-                    ).join('');
-                }
-                geminiModelSelect.value = data.active_model;
-                geminiConnectionStatus.innerHTML = `<span style="color:#00ff88;">● Connected: Key active (${data.masked_key})</span>`;
-            } else {
-                geminiStatusText.textContent = '✨ CONNECT GEMINI';
-                geminiDot.style.background = '#ffaa00';
-                geminiDot.style.boxShadow = '0 0 10px #ffaa00';
-                geminiConnectionStatus.innerHTML = `<span style="color:#ffaa00;">● Free Autonomous Engine Active. Paste Gemini Key for Deep Reasoning.</span>`;
             }
         } catch (e) {
             console.warn("Gemini status error:", e);
         }
     }
-
-    geminiBadge.addEventListener('click', () => {
-        geminiModal.style.display = 'flex';
-        loadGeminiStatus();
-    });
-
-    closeGeminiModalBtn.addEventListener('click', () => {
-        geminiModal.style.display = 'none';
-    });
-
-    saveGeminiBtn.addEventListener('click', async () => {
-        const key = geminiApiKeyInput.value.trim();
-        const model = geminiModelSelect.value;
-        if (!key) {
-            alert('Please paste a valid Gemini API Key from Google AI Studio.');
-            return;
-        }
-
-        saveGeminiBtn.textContent = 'Verifying...';
-        try {
-            const res = await fetch('/api/gemini/key', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ api_key: key, model: model })
-            });
-            const data = await res.json();
-            saveGeminiBtn.textContent = 'Connect Gemini';
-
-            if (data.success) {
-                geminiModal.style.display = 'none';
-                geminiApiKeyInput.value = '';
-                appendMessage('assistant', `✨ **Google Gemini Intelligence Connected!** Model set to **${model}**. Ready for multi-turn conversational reasoning, coding, and tools.`);
-                playVoiceResponse(`Google Gemini intelligence connected successfully, Sir. Systems operating on ${model}.`, currentLanguage);
-                loadGeminiStatus();
-            } else {
-                alert('Could not verify Gemini key. Please check the key and try again.');
-            }
-        } catch (e) {
-            saveGeminiBtn.textContent = 'Connect Gemini';
-            alert('Error connecting Gemini: ' + e.message);
-        }
-    });
 
     newChatBtn.addEventListener('click', async () => {
         window.soundFX.playStartup();
@@ -305,29 +288,72 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     });
 
-    // Multilingual Speech Recognition
+    // Multilingual Speech Recognition & Wake Word Engine
     function getSpeechRecLang(lang) {
         if (lang === 'bn') return 'bn-IN';
         if (['hi', 'bho', 'bgc', 'mwr'].includes(lang)) return 'hi-IN';
         return 'en-US';
     }
 
+    function getNormalizedWakePhrases() {
+        const phrases = new Set();
+        const base = (configuredWakeWord || 'Hey MBRUS').toLowerCase().trim();
+        if (base) {
+            phrases.add(base);
+            const stripped = base.replace(/^(hey|ok|hello|hi)\s+/i, '').trim();
+            if (stripped) {
+                phrases.add(stripped);
+                phrases.add(`hey ${stripped}`);
+                phrases.add(`ok ${stripped}`);
+            }
+        }
+        ["hey mbrus", "mbrus", "hey major", "major", "hey google", "google", "ok google", "jarvis", "hey jarvis", "alexa"].forEach(p => phrases.add(p));
+        return Array.from(phrases).sort((a, b) => b.length - a.length);
+    }
+
+    function checkWakeWordInString(text) {
+        if (!text) return { detected: false, matched: '', command: '' };
+        const clean = text.toLowerCase()
+            .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        const phrases = getNormalizedWakePhrases();
+        for (const p of phrases) {
+            const idx = clean.indexOf(p);
+            if (idx !== -1) {
+                const after = clean.slice(idx + p.length).trim();
+                return { detected: true, matched: p, command: after };
+            }
+        }
+        return { detected: false, matched: '', command: '' };
+    }
+
     function initSpeechRecognition() {
         const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRec) {
             console.warn("Web Speech API not supported.");
+            if (wakeWordStatusText) wakeWordStatusText.textContent = "🎙️ WAKE: NOT SUPPORTED";
             return;
         }
 
+        if (recognition) {
+            try { recognition.abort(); } catch (e) {}
+        }
+
         recognition = new SpeechRec();
-        recognition.continuous = false;
+        recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = getSpeechRecLang(currentLanguage);
 
         recognition.onstart = () => {
             isListening = true;
-            setAssistantState('listening');
-            window.soundFX.playListeningPing();
+            if (!isStandbyMode) {
+                setAssistantState('listening');
+                window.soundFX.playListeningPing();
+            } else {
+                setAssistantState('standby');
+            }
         };
 
         recognition.onresult = (event) => {
@@ -337,24 +363,124 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (event.results[i].isFinal) final += event.results[i][0].transcript;
                 else interim += event.results[i][0].transcript;
             }
+
+            const currentTranscript = (final || interim).trim();
+            if (!currentTranscript) return;
+
+            // 1. STANDBY MODE: Detect Wake Word to Auto-Start Voice Button
+            if (isStandbyMode) {
+                const wakeCheck = checkWakeWordInString(currentTranscript);
+                if (wakeCheck.detected) {
+                    console.log(`[MBRUS] ⚡ Auto-Start Voice Button Activated via "${wakeCheck.matched}"!`);
+                    isStandbyMode = false;
+                    window.soundFX.playListeningPing();
+                    setAssistantState('listening');
+
+                    // If user spoke the command together with the wake phrase (e.g. "Hey Major open youtube")
+                    if (wakeCheck.command && wakeCheck.command.length > 1) {
+                        chatInput.value = wakeCheck.command;
+                        stopListening();
+                        processUserQuery(wakeCheck.command);
+                        return;
+                    } else {
+                        // User spoke only the wake word
+                        chatInput.value = '';
+                        coreStatusText.textContent = 'GREETINGS! SPEAK YOUR COMMAND...';
+                        if (activeListenTimeout) clearTimeout(activeListenTimeout);
+                        activeListenTimeout = setTimeout(() => {
+                            if (!isSpeaking && !isListening) {
+                                isStandbyMode = true;
+                                setAssistantState('standby');
+                                restartRecognitionIfAllowed();
+                            }
+                        }, 7000);
+                        return;
+                    }
+                }
+                return;
+            }
+
+            // 2. ACTIVE COMMAND MODE: Capturing user's voice command
             if (interim) chatInput.value = interim;
             if (final) {
-                chatInput.value = final;
-                processUserQuery(final.trim());
+                if (activeListenTimeout) clearTimeout(activeListenTimeout);
+                const wakeCheck = checkWakeWordInString(final);
+                const cleanCmd = (wakeCheck.detected && wakeCheck.command) ? wakeCheck.command : final;
+                chatInput.value = cleanCmd;
+                stopListening();
+                processUserQuery(cleanCmd.trim());
             }
         };
 
-        recognition.onerror = () => {
+        recognition.onerror = (e) => {
+            console.warn("[Speech] Recognition event:", e.error);
             isListening = false;
-            setAssistantState('idle');
-            if (isHandsFree) setTimeout(() => { if (isHandsFree && !isSpeaking) startListening(); }, 1500);
+            if (e.error === 'not-allowed') {
+                autoWakeEnabled = false;
+                updateWakeWordUI();
+                return;
+            }
+            if (autoWakeEnabled && !isSpeaking) {
+                setTimeout(() => {
+                    restartRecognitionIfAllowed();
+                }, 1000);
+            }
         };
 
         recognition.onend = () => {
             isListening = false;
-            if (!isSpeaking) setAssistantState('idle');
-            if (isHandsFree && !isSpeaking) setTimeout(() => { if (isHandsFree && !isSpeaking) startListening(); }, 800);
+            if (isSpeaking) return;
+
+            if (autoWakeEnabled) {
+                isStandbyMode = true;
+                setAssistantState('standby');
+                setTimeout(() => {
+                    restartRecognitionIfAllowed();
+                }, 300);
+            } else {
+                setAssistantState('idle');
+            }
         };
+    }
+
+    function startListening() {
+        if (!recognition) initSpeechRecognition();
+        if (recognition && !isListening && !isSpeaking) {
+            try {
+                recognition.lang = getSpeechRecLang(currentLanguage);
+                recognition.start();
+            } catch (e) {
+                // start busy or already active
+            }
+        }
+    }
+
+    function stopListening() {
+        if (recognition && isListening) {
+            try {
+                recognition.stop();
+            } catch (e) {}
+            isListening = false;
+        }
+    }
+
+    function restartRecognitionIfAllowed() {
+        if (autoWakeEnabled && !isSpeaking && !isListening) {
+            startListening();
+        }
+    }
+
+    function triggerActiveListening() {
+        if (isSpeaking && currentAudio) {
+            currentAudio.pause();
+            isSpeaking = false;
+        }
+        isStandbyMode = false;
+        stopListening();
+        setAssistantState('listening');
+        setTimeout(() => {
+            startListening();
+        }, 150);
     }
 
     langSelect.addEventListener('change', () => {
@@ -368,57 +494,64 @@ document.addEventListener('DOMContentLoaded', () => {
         appendMessage('assistant', `🌐 Language preference set to **${langNames[currentLanguage]}**.`);
     });
 
-    function startListening() {
-        if (!recognition) initSpeechRecognition();
-        if (recognition && !isListening && !isSpeaking) {
-            try {
-                recognition.lang = getSpeechRecLang(currentLanguage);
-                recognition.start();
-            } catch (e) {
-                console.warn("Recognition start busy:", e);
-            }
+    micBtn.addEventListener('click', () => {
+        if (isListening && !isStandbyMode) {
+            stopListening();
+            isStandbyMode = true;
+            setAssistantState(autoWakeEnabled ? 'standby' : 'idle');
+            restartRecognitionIfAllowed();
+        } else {
+            triggerActiveListening();
         }
-    }
+    });
 
-    function stopListening() {
-        if (recognition && isListening) {
-            recognition.stop();
-            isListening = false;
+    function toggleAutoWake() {
+        autoWakeEnabled = !autoWakeEnabled;
+        localStorage.setItem('mbrus_auto_wake', autoWakeEnabled.toString());
+        updateWakeWordUI();
+        if (autoWakeEnabled) {
+            window.soundFX.playStartup();
+            appendMessage('assistant', `🎙️ Auto-Wake Word Engine enabled. Call **"${configuredWakeWord}"** to activate voice conversation at any time.`);
+            isStandbyMode = true;
+            startListening();
+        } else {
+            stopListening();
+            appendMessage('assistant', 'Auto-Wake Word Engine deactivated.');
             setAssistantState('idle');
         }
     }
 
-    micBtn.addEventListener('click', () => {
-        if (isListening) stopListening();
-        else startListening();
-    });
-
-    handsFreeBtn.addEventListener('click', () => {
-        isHandsFree = !isHandsFree;
-        handsFreeBtn.classList.toggle('active', isHandsFree);
-        if (isHandsFree) {
-            window.soundFX.playStartup();
-            appendMessage('assistant', 'Hands-free continuous listening activated. Speak commands naturally at any time.');
-            startListening();
-        } else {
-            stopListening();
-            appendMessage('assistant', 'Hands-free mode deactivated.');
-        }
-    });
+    handsFreeBtn.addEventListener('click', toggleAutoWake);
+    if (wakeWordBadge) wakeWordBadge.addEventListener('click', toggleAutoWake);
 
     arcReactor.addEventListener('click', () => {
         if (isSpeaking && currentAudio) {
             currentAudio.pause();
             isSpeaking = false;
-            setAssistantState('idle');
-        } else if (!isListening) {
-            startListening();
+            setAssistantState(autoWakeEnabled ? 'standby' : 'idle');
+            restartRecognitionIfAllowed();
+        } else {
+            triggerActiveListening();
         }
     });
 
+    function onVoicePlaybackEnded() {
+        isSpeaking = false;
+        isStandbyMode = true;
+        setAssistantState(autoWakeEnabled ? 'standby' : 'idle');
+        if (autoWakeEnabled) {
+            setTimeout(() => {
+                restartRecognitionIfAllowed();
+            }, 300);
+        }
+    }
+
     // TTS Audio Player
     async function playVoiceResponse(text, targetLang = 'auto', recommendedVoice = '') {
-        if (isMuted || !text) return;
+        if (isMuted || !text) {
+            onVoicePlaybackEnded();
+            return;
+        }
         if (currentAudio) {
             currentAudio.pause();
             currentAudio = null;
@@ -433,9 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentAudio = new Audio(ttsUrl);
 
             currentAudio.onended = () => {
-                isSpeaking = false;
-                setAssistantState('idle');
-                if (isHandsFree) setTimeout(() => { if (isHandsFree && !isListening) startListening(); }, 500);
+                onVoicePlaybackEnded();
             };
 
             currentAudio.onerror = () => fallbackBrowserTTS(text, targetLang);
@@ -447,8 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function fallbackBrowserTTS(text, lang) {
         if (!('speechSynthesis' in window)) {
-            isSpeaking = false;
-            setAssistantState('idle');
+            onVoicePlaybackEnded();
             return;
         }
 
@@ -460,13 +590,10 @@ document.addEventListener('DOMContentLoaded', () => {
         else utterance.lang = 'en-US';
 
         utterance.onend = () => {
-            isSpeaking = false;
-            setAssistantState('idle');
-            if (isHandsFree) setTimeout(() => { if (isHandsFree && !isListening) startListening(); }, 500);
+            onVoicePlaybackEnded();
         };
         utterance.onerror = () => {
-            isSpeaking = false;
-            setAssistantState('idle');
+            onVoicePlaybackEnded();
         };
         window.speechSynthesis.speak(utterance);
     }
@@ -478,8 +605,7 @@ document.addEventListener('DOMContentLoaded', () => {
         muteBtn.innerHTML = isMuted ? '🔇' : '🔊';
         if (isMuted && currentAudio) {
             currentAudio.pause();
-            isSpeaking = false;
-            setAssistantState('idle');
+            onVoicePlaybackEnded();
         }
     });
 
@@ -521,12 +647,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ key: key })
             });
             const data = await res.json();
-            const voiceText = data.voice_text || `Opening ${name} for you, Sir.`;
-            appendMessage('assistant', `🚀 **Opened in Browser:** [${name}](${data.site ? data.site.url : '#'})`);
+            if (data.open_tab && data.url) {
+                console.log("[MBRUS] Opening priority site tab:", data.url);
+                try {
+                    window.open(data.url, '_blank');
+                } catch (e) {
+                    console.warn("[MBRUS] window.open blocked:", e);
+                }
+            }
+            const voiceText = data.voice_text || `Opening ${name} in a new tab for you, Sir.`;
+            appendMessage('assistant', `🚀 **Opened in Browser:** [${name}](${data.url || (data.site ? data.site.url : '#')})`);
             await playVoiceResponse(voiceText, currentLanguage);
         } catch (e) {
             appendMessage('assistant', `Failed to launch ${name}.`);
-            setAssistantState('idle');
+            onVoicePlaybackEnded();
         }
     }
 
@@ -582,6 +716,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await resp.json();
             window.soundFX.playResponseTone();
 
+            // 1. OPEN NEW TAB AUTOMATION
+            if (data.open_tab && data.url) {
+                console.log("[MBRUS] Opening browser tab for:", data.url);
+                try {
+                    window.open(data.url, '_blank');
+                } catch (tabErr) {
+                    console.warn("[MBRUS] window.open notice:", tabErr);
+                }
+            }
+
             if (data.intent === 'state_city_weather' && data.card && data.card.location) {
                 updateWeatherWidget(data.card.location, data.card);
             }
@@ -592,7 +736,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             console.error("Chat API error:", err);
             appendMessage('assistant', 'Sir, my network connection encountered a momentary disruption. Please try again.');
-            setAssistantState('idle');
+            onVoicePlaybackEnded();
         }
     }
 
@@ -771,15 +915,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Settings
+    // Settings Controller
     settingsBtn.addEventListener('click', async () => {
         try {
             const res = await fetch('/api/settings');
             const data = await res.json();
             cityInput.value = data.default_city || '';
             voiceSelect.value = data.tts_voice || selectedVoice;
+            if (wakeWordInput) wakeWordInput.value = data.wake_word || configuredWakeWord;
+            if (autoWakeWordCheck) autoWakeWordCheck.checked = (data.auto_wake_word !== undefined ? data.auto_wake_word : autoWakeEnabled);
             settingsModal.style.display = 'flex';
         } catch (e) {
+            if (wakeWordInput) wakeWordInput.value = configuredWakeWord;
+            if (autoWakeWordCheck) autoWakeWordCheck.checked = autoWakeEnabled;
             settingsModal.style.display = 'flex';
         }
     });
@@ -789,14 +937,45 @@ document.addEventListener('DOMContentLoaded', () => {
     saveSettingsBtn.addEventListener('click', async () => {
         const city = cityInput.value.trim();
         selectedVoice = voiceSelect.value;
-        await fetch('/api/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ default_city: city, tts_voice: selectedVoice })
-        });
+        const newWake = wakeWordInput ? wakeWordInput.value.trim() : configuredWakeWord;
+        const newAutoWake = autoWakeWordCheck ? autoWakeWordCheck.checked : true;
+
+        if (newWake) {
+            configuredWakeWord = newWake;
+            localStorage.setItem('mbrus_wake_word', configuredWakeWord);
+        }
+        autoWakeEnabled = newAutoWake;
+        localStorage.setItem('mbrus_auto_wake', autoWakeEnabled.toString());
+
+        updateWakeWordUI();
+
+        try {
+            await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    default_city: city, 
+                    tts_voice: selectedVoice,
+                    wake_word: configuredWakeWord,
+                    auto_wake_word: autoWakeEnabled
+                })
+            });
+        } catch (e) {
+            console.warn("Settings save backend error:", e);
+        }
+
         settingsModal.style.display = 'none';
-        appendMessage('assistant', `Settings updated successfully. Voice set to ${selectedVoice}.`);
+        appendMessage('assistant', `Settings updated. Call name set to **"${configuredWakeWord}"**. Auto-Wake: **${autoWakeEnabled ? 'Active' : 'Disabled'}**.`);
         loadLiveWeather();
+
+        if (autoWakeEnabled) {
+            isStandbyMode = true;
+            setAssistantState('standby');
+            restartRecognitionIfAllowed();
+        } else {
+            stopListening();
+            setAssistantState('idle');
+        }
     });
 
     // Startup Initializations
@@ -812,5 +991,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setTimeout(() => {
         window.soundFX.playStartup();
-    }, 500);
+        if (autoWakeEnabled) {
+            isStandbyMode = true;
+            setAssistantState('standby');
+            startListening();
+        }
+    }, 600);
 });

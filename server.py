@@ -96,11 +96,6 @@ class PriorityLaunchRequest(BaseModel):
     key: str
 
 
-class GeminiKeyRequest(BaseModel):
-    api_key: str
-    model: Optional[str] = ""
-
-
 class GeminiModelRequest(BaseModel):
     model: str
 
@@ -108,6 +103,8 @@ class GeminiModelRequest(BaseModel):
 class SettingsRequest(BaseModel):
     default_city: Optional[str] = None
     tts_voice: Optional[str] = None
+    wake_word: Optional[str] = None
+    auto_wake_word: Optional[bool] = None
 
 
 # ---------------------------------------------------------
@@ -225,9 +222,12 @@ async def launch_priority_site_endpoint(req: PriorityLaunchRequest):
     site_info = sites.get(key_clean)
 
     res = open_application(key_clean)
+    target_url = res.get("url") or (site_info.get("url") if site_info else None)
     return {
         "success": True,
         "site": site_info,
+        "open_tab": res.get("open_tab", True),
+        "url": target_url,
         "voice_text": res.get("voice_text", f"Opening {key_clean} in your browser, Sir.")
     }
 
@@ -264,13 +264,6 @@ async def gemini_status_endpoint():
     return JSONResponse(content=status)
 
 
-@app.post("/api/gemini/key")
-async def gemini_key_endpoint(req: GeminiKeyRequest):
-    """Saves and verifies a Gemini API key."""
-    result = save_gemini_key(req.api_key, model=req.model or "")
-    return JSONResponse(content=result)
-
-
 @app.post("/api/gemini/model")
 async def gemini_model_endpoint(req: GeminiModelRequest):
     """Switches the active Gemini model."""
@@ -286,6 +279,9 @@ async def gemini_clear_chat_endpoint():
     return JSONResponse(content={"success": True, "message": "Conversation session reset successfully."})
 
 
+WAKE_WORD = os.getenv("WAKE_WORD", "Hey MBRUS")
+AUTO_WAKE_WORD = True
+
 # ---------------------------------------------------------
 # Settings Endpoints
 # ---------------------------------------------------------
@@ -294,18 +290,30 @@ async def get_settings_endpoint():
     return {
         "default_city": DEFAULT_CITY,
         "tts_voice": TTS_VOICE,
+        "wake_word": WAKE_WORD,
+        "auto_wake_word": AUTO_WAKE_WORD,
         "supported_languages": INDIAN_LANGUAGES
     }
 
 
 @app.post("/api/settings")
 async def save_settings_endpoint(req: SettingsRequest):
-    global DEFAULT_CITY, TTS_VOICE
+    global DEFAULT_CITY, TTS_VOICE, WAKE_WORD, AUTO_WAKE_WORD
     if req.default_city:
         DEFAULT_CITY = req.default_city
     if req.tts_voice:
         TTS_VOICE = req.tts_voice
-    return {"success": True, "default_city": DEFAULT_CITY, "tts_voice": TTS_VOICE}
+    if req.wake_word is not None and req.wake_word.strip():
+        WAKE_WORD = req.wake_word.strip()
+    if req.auto_wake_word is not None:
+        AUTO_WAKE_WORD = req.auto_wake_word
+    return {
+        "success": True,
+        "default_city": DEFAULT_CITY,
+        "tts_voice": TTS_VOICE,
+        "wake_word": WAKE_WORD,
+        "auto_wake_word": AUTO_WAKE_WORD
+    }
 
 
 if __name__ == "__main__":
