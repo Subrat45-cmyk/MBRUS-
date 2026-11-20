@@ -1,4 +1,45 @@
+# Environment files & secrets (NEVER commit these)
 .env
-.venv/
+.env.*
+*.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Python bytecode & cache
 __pycache__/
+*/__pycache__/
+*/*/__pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE & Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Logs & PIDs
+*.log
+*.pid
