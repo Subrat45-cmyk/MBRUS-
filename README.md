@@ -13,9 +13,33 @@ Gemini, live information, and Windows desktop controls.
   MBRUS saves it in a `.env` file in the project directory.
 - Provides live weather, cricket scores, news and web search, plus GPS-based
   location and weather when you grant browser location access.
-- Opens configured priority websites and supported desktop applications,
-  adjusts system volume, and reports CPU, memory, disk, and battery status.
-- Includes settings for the default city and speech voice.
+- Opens websites and supported desktop applications in dedicated browser tabs,
+  launches YouTube or Spotify playback, and searches within supported sites.
+- Opens user-configured priority websites, adjusts system volume, and reports
+  CPU, memory, disk, and battery status.
+- Includes a wake-word standby engine, a custom call name, an in-dashboard
+  Gemini model switcher, settings for the default city and speech voice, and a
+  new-chat action that resets conversation history.
+
+## Recent upgrades
+
+- Added a modern Dragon HUD dashboard with live status indicators, quick-command
+  chips, an arc-reactor assistant state, hands-free listening controls, and
+  audio mute controls.
+- Added configurable wake-word standby listening and custom wake/call phrases,
+  including support for names such as "Hey MBRUS" or "Jarvis".
+- Added new-tab browser automation for YouTube, Gmail, WhatsApp, GitHub,
+  ChatGPT, Spotify, Google Maps, Amazon, Instagram, Facebook, and more.
+- Added YouTube and Spotify playback commands, app-specific search commands,
+  direct domain launching, and Google fallback search.
+- Expanded priority-site management with dashboard controls to add, list, and
+  remove custom websites.
+- Added Gemini model selection and a **New Chat** control for clearing
+  multi-turn chat history.
+- Improved multilingual command handling and localized voice responses for
+  English, Hindi, Bengali, Bhojpuri, Haryanvi, and Marwadi.
+- Added browser tab handling so chat and priority-site actions open URLs in
+  `_blank` tabs while preserving the MBRUS interface.
 
 Live information and Gemini require an internet connection. Gemini-backed
 conversation requires a Google Gemini API key. Microphone and location features
@@ -96,6 +120,8 @@ HOST=127.0.0.1
 PORT=8000
 DEFAULT_CITY=New Delhi
 GEMINI_MODEL=gemini-3.5-flash-lite
+ASSISTANT_NAME=MBRUS
+WAKE_WORD=Hey MBRUS
 TTS_VOICE=en-US-ChristopherNeural
 TTS_RATE=+18%
 TTS_PITCH=+0Hz
@@ -106,4 +132,6 @@ Set the Gemini key through **Connect Gemini** in the dashboard, or add
 do not commit or share it. Keep the server bound to localhost unless you have
 deliberately configured and secured access from other devices.
 
-The default city and voice can also be changed from the dashboard settings.
+The default city, neural TTS voice, wake/call name, and auto-wake setting can
+also be changed from the dashboard settings. Wake-word and auto-wake preferences
+are runtime settings and should be managed through the dashboard.
